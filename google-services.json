@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "977379094055",
+    "project_id": "accessfit-d018f",
+    "storage_bucket": "accessfit-d018f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:977379094055:android:b998cbda8f6ade4e856802",
+        "android_client_info": {
+          "package_name": "com.accessfit.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB20feYgL55iUEirPo-77c6tU8vrCyVgxs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
