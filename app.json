@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./src/assets/splash-icon.png",
       "resizeMode": "contain",
@@ -24,6 +24,20 @@
     },
     "web": {
       "favicon": "./src/assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-barcode-scanner"
+    ],
+    "extra": {
+      "firebase": {
+        "apiKey": "AIzaSyB20feYgL55iUEirPo-77c6tU8vrCyVgxs",
+        "authDomain": "accessfit-d018f.firebaseapp.com",
+        "projectId": "accessfit-d018f",
+        "storageBucket": "accessfit-d018f.appspot.com",
+        "messagingSenderId": "977379094055",
+        "appId": "1:977379094055:android:b998cbda8f6ade4e856802"
+      }
     }
   }
 }

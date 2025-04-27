@@ -3,45 +3,24 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-nativ
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, FONTS, SIZES } from "../constants/theme";
-import { auth, db } from '../firebase';
-import { setDoc, doc } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
-const SignUpScreen = ({ navigation }) => {
-  const [fullName, setFullName] = useState("");
+const SignInScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [isChecked, setIsChecked] = useState(false);
+  const [keepSignedIn, setKeepSignedIn] = useState(false);
 
-  // 📌 Kullanıcıyı Firestore'a Kaydet
-  const saveUserToFirestore = async (user) => {
-    if (!user) return;
-    try {
-      await setDoc(doc(db, "users", user.uid), {
-        fullName: fullName || user.displayName || "Anonymous",
-        email: user.email,
-        phone: phone || user.phoneNumber || "",
-        createdAt: new Date(),
-      });
-    } catch (error) {
-      console.error("Error saving to Firestore:", error);
-    }
-  };
-
-  // 📌 Firebase E-posta ile Kullanıcı Kaydetme
-  const handleSignUp = async () => {
-    if (!fullName || !email || !phone || !password || !isChecked) {
-      alert("Please fill in all fields and accept the privacy policy.");
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      alert("Please enter your email and password.");
       return;
     }
-
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await saveUserToFirestore(userCredential.user);
+      await signInWithEmailAndPassword(auth, email, password);
       navigation.navigate("Home");
     } catch (error) {
-      alert("Registration error: " + error.message);
+      alert("Login error: " + error.message);
     }
   };
 
@@ -54,19 +33,11 @@ const SignUpScreen = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.white} />
         </TouchableOpacity>
-        <Text style={styles.title}>Sign Up</Text>
+        <Text style={styles.title}>Login</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <View style={styles.formContainer}>
-        <TextInput
-          placeholder="Full Name"
-          value={fullName}
-          onChangeText={setFullName}
-          style={styles.input}
-          placeholderTextColor={COLORS.gray}
-        />
-
         <TextInput
           placeholder="Email"
           value={email}
@@ -75,15 +46,6 @@ const SignUpScreen = ({ navigation }) => {
           placeholderTextColor={COLORS.gray}
           keyboardType="email-address"
           autoCapitalize="none"
-        />
-
-        <TextInput
-          placeholder="Phone"
-          value={phone}
-          onChangeText={setPhone}
-          style={styles.input}
-          placeholderTextColor={COLORS.gray}
-          keyboardType="phone-pad"
         />
 
         <TextInput
@@ -97,18 +59,20 @@ const SignUpScreen = ({ navigation }) => {
 
         <TouchableOpacity
           style={styles.checkboxContainer}
-          onPress={() => setIsChecked(!isChecked)}
+          onPress={() => setKeepSignedIn(!keepSignedIn)}
         >
-          <View style={[styles.checkbox, isChecked && styles.checked]}>
-            {isChecked && <Ionicons name="checkmark" size={16} color={COLORS.white} />}
+          <View style={[styles.checkbox, keepSignedIn && styles.checked]}>
+            {keepSignedIn && <Ionicons name="checkmark" size={16} color={COLORS.white} />}
           </View>
-          <Text style={styles.checkboxText}>
-            By continuing you accept our Privacy Policy
-          </Text>
+          <Text style={styles.checkboxText}>Keep me signed in</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
-          <Text style={styles.signUpText}>Sign Up</Text>
+        <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
+          <Text style={styles.signInText}>Sign in</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
+          <Text style={styles.forgotPassword}>Forgot Password?</Text>
         </TouchableOpacity>
 
         <View style={styles.orContainer}>
@@ -124,11 +88,11 @@ const SignUpScreen = ({ navigation }) => {
       </View>
 
       <TouchableOpacity
-        style={styles.signInContainer}
-        onPress={() => navigation.navigate("SignIn")}
+        style={styles.signUpContainer}
+        onPress={() => navigation.navigate("SignUp")}
       >
-        <Text style={styles.signInText}>
-          Already have an account? <Text style={styles.signInLink}>Sign In</Text>
+        <Text style={styles.signUpText}>
+          Don't have an account? <Text style={styles.signUpLink}>Sign Up</Text>
         </Text>
       </TouchableOpacity>
     </LinearGradient>
@@ -185,19 +149,25 @@ const styles = StyleSheet.create({
   checkboxText: {
     color: COLORS.white,
     fontSize: SIZES.font,
-    flex: 1,
   },
-  signUpButton: {
+  signInButton: {
     backgroundColor: COLORS.black,
     borderRadius: SIZES.base,
     padding: SIZES.medium,
     alignItems: "center",
     marginBottom: SIZES.medium,
   },
-  signUpText: {
+  signInText: {
     color: COLORS.white,
     fontSize: SIZES.medium,
     fontWeight: FONTS.bold,
+  },
+  forgotPassword: {
+    color: COLORS.white,
+    fontSize: SIZES.font,
+    textAlign: "center",
+    textDecorationLine: "underline",
+    marginBottom: SIZES.large,
   },
   orContainer: {
     flexDirection: "row",
@@ -229,18 +199,18 @@ const styles = StyleSheet.create({
     fontSize: SIZES.medium,
     fontWeight: FONTS.bold,
   },
-  signInContainer: {
+  signUpContainer: {
     alignItems: "center",
     marginTop: "auto",
   },
-  signInText: {
+  signUpText: {
     color: COLORS.white,
     fontSize: SIZES.font,
   },
-  signInLink: {
+  signUpLink: {
     color: COLORS.primary,
     fontWeight: FONTS.bold,
   },
 });
 
-export default SignUpScreen;
+export default SignInScreen;
