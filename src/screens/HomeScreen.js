@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { COLORS, FONTS, SIZES } from "../constants/theme";
@@ -69,7 +69,7 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>My Progress</Text>
           <BarChart
             data={chartData}
-            width={styles.chart.width}
+            width={Dimensions.get("window").width - SIZES.extraLarge * 2}
             height={180}
             yAxisLabel=""
             chartConfig={{
