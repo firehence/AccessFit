@@ -30,7 +30,7 @@ const CardioScreen = () => {
       setLastStepTime(now);
       setStepCount((prev) => {
         const newCount = prev + 1;
-        saveTodaySteps(newCount); // Anında Firestore'a kaydet
+        saveTodaySteps(newCount); 
         return newCount;
       });
     }

@@ -19,7 +19,6 @@ const WorkoutPlanScreen = () => {
     loadSelectedExercises();
   }, []);
 
-  // 📌 Seçilen Egzersizleri AsyncStorage'den Çek
   const loadSelectedExercises = async () => {
     try {
       const storedExercises = await AsyncStorage.getItem("selectedExercises");
@@ -31,7 +30,6 @@ const WorkoutPlanScreen = () => {
     }
   };
 
-  // 📌 Workout Planı Kaydet ve Önceki Seçimleri Sıfırla
   const saveWorkoutPlan = async () => {
     if (!planName.trim()) {
       alert("Please enter a plan name!");
@@ -41,9 +39,8 @@ const WorkoutPlanScreen = () => {
     const newPlan = { name: planName, exercises: selectedExercises };
     await AsyncStorage.setItem("savedWorkoutPlan", JSON.stringify(newPlan));
 
-    // 📌 Önceki seçimleri temizle
     await AsyncStorage.removeItem("selectedExercises");
-    setSelectedExercises([]); // State'i sıfırla
+    setSelectedExercises([]);
 
     alert(`Workout plan "${planName}" saved!`);
     navigation.navigate("Home", { savedPlan: newPlan });
@@ -60,7 +57,7 @@ const WorkoutPlanScreen = () => {
         onChangeText={setPlanName}
       />
 
-      {/* 📌 Seçilen Egzersizleri Listele */}
+      {/*Seçilen Egzersizleri Listele */}
       <FlatList
         data={selectedExercises}
         keyExtractor={(item) => item}
@@ -71,7 +68,7 @@ const WorkoutPlanScreen = () => {
         )}
       />
 
-      {/* 📌 Planı Kaydet Butonu */}
+      {/*Planı Kaydet Butonu */}
       <TouchableOpacity style={styles.saveButton} onPress={saveWorkoutPlan}>
         <Text style={styles.saveButtonText}>Save Plan</Text>
       </TouchableOpacity>

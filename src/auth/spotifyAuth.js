@@ -1,4 +1,3 @@
-// src/auth/spotifyAuth.js
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -32,7 +31,7 @@ export function useSpotifyAuth() {
       scopes: SCOPES,
       redirectUri: REDIRECT_URI,
       usePKCE: true,
-      responseType: "code", // PKCE ile çalışacak
+      responseType: "code", 
     },
     discovery
   );

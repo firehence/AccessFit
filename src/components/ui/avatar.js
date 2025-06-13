@@ -15,8 +15,8 @@ const Avatar = ({ uri, initials }) => {
 
 const styles = StyleSheet.create({
   avatar: {
-    width: 40,   // orijinal width 40px
-    height: 40,  // orijinal height 40px
+    width: 40,   
+    height: 40,  
     borderRadius: 20,
     backgroundColor: '#ccc',
     alignItems: 'center',

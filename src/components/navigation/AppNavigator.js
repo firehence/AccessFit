@@ -5,9 +5,9 @@ import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from "../screens/HomeScreen";
 import QRScannerScreen from '../screens/QRScannerScreen';
 import WorkoutPlansScreen from "../screens/WorkoutPlansScreen";
-import ExerciseSelectionScreen from "../screens/ExerciseSelectionScreen"; // 📌 Egzersiz seçme ekranı eklendi
-import WorkoutPlanScreen from "../screens/WorkoutPlanScreen"; // 📌 Kullanıcının oluşturduğu planı inceleyeceği ekran
-import MyWorkoutScreen from "../screens/MyWorkoutScreen"; //
+import ExerciseSelectionScreen from "../screens/ExerciseSelectionScreen"; 
+import WorkoutPlanScreen from "../screens/WorkoutPlanScreen"; 
+import MyWorkoutScreen from "../screens/MyWorkoutScreen"; 
 
 const Stack = createStackNavigator();
 
@@ -17,42 +17,42 @@ const AppNavigator = () => (
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="QRScanner" component={QRScannerScreen} />
       <Stack.Screen name="Dashboard" component={Dashboard} />
-            {/* 📌 Ana ekran */}
+            {/*   Ana ekran */}
       <Stack.Screen
         name="Home"
         component={HomeScreen}
         options={{ title: "Dashboard" }}
       />
 
-      {/* 📌 QR Kod Tarayıcı */}
+      {/*   QR Kod Tarayıcı */}
       <Stack.Screen
         name="QRScanner"
         component={QRScannerScreen}
         options={{ title: "Scan QR Code", headerBackTitle: "Back" }}
       />
 
-      {/* 📌 Workout Plan Kategorileri */}
+      {/*   Workout Plan Kategorileri */}
       <Stack.Screen
         name="WorkoutPlans"
         component={WorkoutPlansScreen}
         options={{ title: "Workout Plans", headerBackTitle: "Back" }}
       />
 
-      {/* 📌 Egzersiz Seçme Ekranı */}
+      {/*   Egzersiz Seçme Ekranı */}
       <Stack.Screen
         name="ExerciseSelection"
         component={ExerciseSelectionScreen}
         options={{ title: "Select Exercises", headerBackTitle: "Back" }}
       />
 
-      {/* 📌 Kullanıcının Seçtiği Planı İnceleme Ekranı */}
+      {/*   Kullanıcının Seçtiği Planı İnceleme Ekranı */}
       <Stack.Screen
         name="WorkoutPlanScreen"
         component={WorkoutPlanScreen}
         options={{ title: "My Workout Plan", headerBackTitle: "Back" }}
       />
 
-      {/* 📌 Kaydedilen Workout Planlarını Görüntüleme */}
+      {/*   Kaydedilen Workout Planlarını Görüntüleme */}
       <Stack.Screen
         name="MyWorkout"
         component={MyWorkoutScreen}

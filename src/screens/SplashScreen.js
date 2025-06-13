@@ -35,7 +35,7 @@ const SplashScreen = ({ navigation }) => {
     const timer = setTimeout(() => {
       onAuthStateChanged(auth, (user) => {
         if (user) {
-          navigation.replace("BottomTabs"); // 🔁 Doğrudan uygulamaya yönlendir
+          navigation.replace("BottomTabs"); 
         } else {
           navigation.replace("Main");
         }
