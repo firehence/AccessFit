@@ -13,8 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { signOut } from 'firebase/auth';
-import { auth, db } from '../firebase-fix';
-
+import { auth } from '../firebase-fix';
 
 const SettingsScreen = () => {
   const navigation = useNavigation();
@@ -22,7 +21,7 @@ const SettingsScreen = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth); 
+      await signOut(auth);
       navigation.replace('Main');
     } catch (error) {
       Alert.alert('Logout Error', error.message);
@@ -39,6 +38,10 @@ const SettingsScreen = () => {
 
   const openRating = () => {
     Linking.openURL('https://your-playstore-link.com');
+  };
+
+  const goToBadges = () => {
+    navigation.navigate('BadgeGallery');
   };
 
   return (
@@ -60,6 +63,10 @@ const SettingsScreen = () => {
                 thumbColor={notificationsEnabled ? '#f5dd4b' : '#f4f3f4'}
               />
             </View>
+
+            <TouchableOpacity style={styles.item} onPress={goToBadges}>
+              <Text style={styles.itemText}>🎖 My Badges</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity style={styles.item} onPress={openAbout}>
               <Text style={styles.itemText}>About</Text>
@@ -84,9 +91,7 @@ const SettingsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   scroll: {
     paddingTop: 60,
     paddingHorizontal: 20,

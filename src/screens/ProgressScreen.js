@@ -1,21 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   TextInput,
-  Button,
-  StyleSheet,
-  ScrollView,
   Dimensions,
   Alert,
-  TouchableOpacity,
+  ScrollView,
   Share,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
 } from 'react-native';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { LineChart } from 'react-native-chart-kit';
+import { LinearGradient } from 'expo-linear-gradient';
 import { auth, db } from '../firebase-fix';
 
-const ProgressScreen = () => {
+const ProgressOverview = () => {
   const [weightHistory, setWeightHistory] = useState([]);
   const [currentWeight, setCurrentWeight] = useState('');
   const [targetWeight, setTargetWeight] = useState('');
@@ -27,36 +28,32 @@ const ProgressScreen = () => {
   const [goalReached, setGoalReached] = useState(false);
   const [goalCount, setGoalCount] = useState(0);
   const [badgeLevel, setBadgeLevel] = useState(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const badgeEmoji = {
+    bronze: '🥉',
+    silver: '🥈',
+    gold: '🥇',
+  };
 
   const fetchProgressData = async () => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
-
-    try {
-      const userRef = doc(db, 'users', uid);
-      const docSnap = await getDoc(userRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const history = data.weightHistory || [];
-
-        const map = new Map();
-        history.forEach((entry) => map.set(entry.date, entry));
-        const unique = Array.from(map.values()).sort(
-          (a, b) => new Date(a.date) - new Date(b.date)
-        );
-
-        setWeightHistory(unique);
-        setTargetWeight(data.targetWeight || '');
-        setDailyCalories(data.dailyCalories || '');
-        setNewTargetWeight(data.targetWeight || '');
-        setNewDailyCalories(data.dailyCalories?.toString() || '');
-        setGoalReached(data.goalReached || false);
-        setGoalCount(data.goalCount || 0);
-        setBadgeLevel(data.badgeLevel || null);
-      }
-    } catch (error) {
-      console.log(error.message);
+    const userRef = doc(db, 'users', uid);
+    const docSnap = await getDoc(userRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const map = new Map();
+      (data.weightHistory || []).forEach((entry) => map.set(entry.date, entry));
+      const unique = Array.from(map.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
+      setWeightHistory(unique);
+      setTargetWeight(data.targetWeight || '');
+      setDailyCalories(data.dailyCalories || '');
+      setNewTargetWeight(data.targetWeight || '');
+      setNewDailyCalories(data.dailyCalories?.toString() || '');
+      setGoalReached(data.goalReached || false);
+      setGoalCount(data.goalCount || 0);
+      setBadgeLevel(data.badgeLevel || null);
     }
   };
 
@@ -67,31 +64,14 @@ const ProgressScreen = () => {
     return null;
   };
 
-  const badgeEmoji = {
-    bronze: '🥉',
-    silver: '🥈',
-    gold: '🥇',
-  };
-
   const addWeightEntry = async () => {
     const uid = auth.currentUser?.uid;
     if (!uid || !currentWeight) return;
-
-    const userRef = doc(db, 'users', uid);
     const date = new Date().toISOString().split('T')[0];
-
-    const map = new Map();
-    weightHistory.forEach((entry) => map.set(entry.date, entry));
+    const map = new Map(weightHistory.map((entry) => [entry.date, entry]));
     map.set(date, { date, weight: parseFloat(currentWeight) });
-
-    const updated = Array.from(map.values()).sort(
-      (a, b) => new Date(a.date) - new Date(b.date)
-    );
-
-    await updateDoc(userRef, {
-      weightHistory: updated,
-    });
-
+    const updated = Array.from(map.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
+    await updateDoc(doc(db, 'users', uid), { weightHistory: updated });
     setWeightHistory(updated);
     setCurrentWeight('');
   };
@@ -99,18 +79,15 @@ const ProgressScreen = () => {
   const updateTargets = async () => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
-
-    const userRef = doc(db, 'users', uid);
-    await updateDoc(userRef, {
+    await updateDoc(doc(db, 'users', uid), {
       targetWeight: newTargetWeight,
       dailyCalories: parseInt(newDailyCalories),
       goalReached: false,
     });
-
     setTargetWeight(newTargetWeight);
     setDailyCalories(parseInt(newDailyCalories));
     setGoalReached(false);
-    Alert.alert('Updated', 'Goals updated successfully');
+    Alert.alert('✅ Updated', 'Goals updated successfully');
   };
 
   const exportToJson = async () => {
@@ -124,237 +101,200 @@ const ProgressScreen = () => {
 
   useEffect(() => {
     fetchProgressData();
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   useEffect(() => {
     if (weightHistory.length && targetWeight && dailyCalories) {
-      const latestWeight = weightHistory[weightHistory.length - 1].weight;
-      const difference = latestWeight - parseFloat(targetWeight);
-      const estimatedDays = Math.ceil(Math.abs((difference * 7700) / dailyCalories));
-      setEstimatedDaysLeft(estimatedDays);
-
-      if (!goalReached && latestWeight <= parseFloat(targetWeight)) {
+      const latest = weightHistory[weightHistory.length - 1].weight;
+      const diff = latest - parseFloat(targetWeight);
+      const estDays = Math.ceil(Math.abs((diff * 7700) / dailyCalories));
+      setEstimatedDaysLeft(estDays);
+      if (!goalReached && latest <= parseFloat(targetWeight)) {
         const uid = auth.currentUser?.uid;
-        if (!uid) return;
         const userRef = doc(db, 'users', uid);
         const newGoalCount = goalCount + 1;
-        const newBadgeLevel = determineBadge(newGoalCount);
-
+        const newBadge = determineBadge(newGoalCount);
         updateDoc(userRef, {
           goalReached: true,
           goalCount: newGoalCount,
-          badgeLevel: newBadgeLevel,
+          badgeLevel: newBadge,
         });
-
         setGoalReached(true);
         setGoalCount(newGoalCount);
-        setBadgeLevel(newBadgeLevel);
-        Alert.alert("🎉 Goal Achieved!", `You've earned a ${newBadgeLevel} badge!`);
+        setBadgeLevel(newBadge);
+        Alert.alert("🎉 Goal Reached!", `You earned a ${newBadge} badge!`);
       }
     }
   }, [weightHistory, targetWeight, dailyCalories]);
 
   const filteredData = () => {
     const now = new Date();
-    let daysBack = parseInt(filter);
     if (filter === 'all') return weightHistory;
     return weightHistory.filter((entry) => {
-      const entryDate = new Date(entry.date);
-      return (now - entryDate) / (1000 * 60 * 60 * 24) <= daysBack;
+      return (now - new Date(entry.date)) / (1000 * 60 * 60 * 24) <= parseInt(filter);
     });
   };
 
   const chartData = {
     labels: filteredData().map((entry) => entry.date.slice(5)),
-    datasets: [
-      {
-        data: filteredData().map((entry) => entry.weight),
-        strokeWidth: 2,
-      },
-    ],
+    datasets: [{ data: filteredData().map((entry) => entry.weight), strokeWidth: 2 }],
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <View style={styles.spacer} />
-      <Text style={styles.title}>Progress Overview</Text>
+    <LinearGradient colors={['#2E0066', '#50238F', '#9A75DA']} style={styles.container}>
+      <Animated.ScrollView style={{ opacity: fadeAnim }} contentContainerStyle={styles.scrollContainer}>
+        <Text style={styles.header}>📈 Progress Overview</Text>
 
-      <View style={styles.filterRow}>
-        {['7', '30', 'all'].map((key) => (
-          <TouchableOpacity
-            key={key}
-            style={[
-              styles.filterButton,
-              filter === key && styles.filterButtonActive,
-            ]}
-            onPress={() => setFilter(key)}
-          >
-            <Text style={styles.filterText}>
-              {key === '7' ? '1W' : key === '30' ? '1M' : 'All'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {filteredData().length > 1 ? (
-        <LineChart
-          data={chartData}
-          width={Dimensions.get('window').width - 30}
-          height={220}
-          yAxisSuffix="kg"
-          chartConfig={{
-            backgroundColor: '#1e2a3a',
-            backgroundGradientFrom: '#101729',
-            backgroundGradientTo: '#101729',
-            decimalPlaces: 1,
-            color: (opacity = 1) => `rgba(0, 255, 200, ${opacity})`,
-            labelColor: () => '#ccc',
-          }}
-          style={styles.chart}
-        />
-      ) : (
-        <Text style={styles.noData}>No weight data yet.</Text>
-      )}
-
-      {badgeLevel && (
-        <View style={styles.badgeBox}>
-          <Text style={styles.badgeText}>
-            {badgeEmoji[badgeLevel]} You earned a {badgeLevel.toUpperCase()} badge!
-          </Text>
+        <View style={styles.filterRow}>
+          {['7', '30', 'all'].map((key) => (
+            <TouchableOpacity
+              key={key}
+              style={[styles.filterButton, filter === key && styles.activeButton]}
+              onPress={() => setFilter(key)}
+            >
+              <Text style={styles.filterText}>
+                {key === '7' ? '1W' : key === '30' ? '1M' : 'All'}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      )}
 
-      <Text style={styles.label}>Today's Weight (kg)</Text>
-      <TextInput
-        style={styles.input}
-        keyboardType="numeric"
-        value={currentWeight}
-        onChangeText={setCurrentWeight}
-        placeholder="Enter your weight"
-        placeholderTextColor="#666"
-      />
-      <Button title="Add Weight Entry" onPress={addWeightEntry} />
+        {filteredData().length > 1 ? (
+          <LineChart
+            data={chartData}
+            width={Dimensions.get('window').width - 30}
+            height={220}
+            yAxisSuffix="kg"
+            chartConfig={{
+              backgroundGradientFrom: '#50238F',
+              backgroundGradientTo: '#9A75DA',
+              decimalPlaces: 1,
+              color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+              labelColor: () => '#fff',
+            }}
+            style={styles.chart}
+          />
+        ) : (
+          <Text style={styles.noData}>No weight data yet.</Text>
+        )}
 
-      {targetWeight ? (
-        <Text style={styles.infoText}>🎯 Target Weight: {targetWeight} kg</Text>
-      ) : null}
-      {dailyCalories ? (
-        <Text style={styles.infoText}>🔥 Daily Calorie Goal: {dailyCalories} kcal</Text>
-      ) : null}
-      {estimatedDaysLeft !== null && (
-        <Text style={styles.infoText}>
-          ⏳ Estimated Days to Target: {estimatedDaysLeft} days
-        </Text>
-      )}
+        {badgeLevel && (
+          <View style={styles.badgeBox}>
+            <Text style={styles.badgeText}>
+              {badgeEmoji[badgeLevel]} You've earned a {badgeLevel.toUpperCase()} badge!
+            </Text>
+          </View>
+        )}
 
-      <Text style={styles.sectionTitle}>Update Goals</Text>
+        <Text style={styles.subHeader}>➕ Today's Weight</Text>
+        <TextInput
+          style={styles.input}
+          keyboardType="numeric"
+          value={currentWeight}
+          onChangeText={setCurrentWeight}
+          placeholder="Enter today's weight"
+          placeholderTextColor="#aaa"
+        />
+        <TouchableOpacity style={styles.btn} onPress={addWeightEntry}>
+          <Text style={styles.btnText}>Add Entry</Text>
+        </TouchableOpacity>
 
-      <TextInput
-        style={styles.input}
-        keyboardType="numeric"
-        value={newTargetWeight}
-        onChangeText={setNewTargetWeight}
-        placeholder="New target weight"
-        placeholderTextColor="#666"
-      />
-      <TextInput
-        style={styles.input}
-        keyboardType="numeric"
-        value={newDailyCalories}
-        onChangeText={setNewDailyCalories}
-        placeholder="New daily calories"
-        placeholderTextColor="#666"
-      />
-      <Button title="Update Goals" onPress={updateTargets} />
+        <View style={styles.goalInfo}>
+          {targetWeight && <Text style={styles.infoText}>🎯 Target: {targetWeight} kg</Text>}
+          {dailyCalories && <Text style={styles.infoText}>🔥 Calories/day: {dailyCalories}</Text>}
+          {estimatedDaysLeft !== null && (
+            <Text style={styles.infoText}>⏳ Est. Days Left: {estimatedDaysLeft}</Text>
+          )}
+        </View>
 
-      <View style={{ marginTop: 20 }}>
-        <Button title="📤 Export Data as JSON" onPress={exportToJson} />
-      </View>
-    </ScrollView>
+        <Text style={styles.subHeader}>🎯 Update Goals</Text>
+        <TextInput
+          style={styles.input}
+          keyboardType="numeric"
+          value={newTargetWeight}
+          onChangeText={setNewTargetWeight}
+          placeholder="New target weight"
+          placeholderTextColor="#aaa"
+        />
+        <TextInput
+          style={styles.input}
+          keyboardType="numeric"
+          value={newDailyCalories}
+          onChangeText={setNewDailyCalories}
+          placeholder="New daily calories"
+          placeholderTextColor="#aaa"
+        />
+        <TouchableOpacity style={styles.btn} onPress={updateTargets}>
+          <Text style={styles.btnText}>Update Goals</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.btn, { backgroundColor: '#444' }]} onPress={exportToJson}>
+          <Text style={styles.btnText}>📤 Export JSON</Text>
+        </TouchableOpacity>
+      </Animated.ScrollView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#101729',
-    padding: 15,
-    flex: 1,
-  },
-  spacer: { height: 20 },
-  title: {
-    color: '#fff',
+  container: { flex: 1 },
+  scrollContainer: { padding: 20, paddingBottom: 50 },
+  header: {
     fontSize: 24,
-    marginBottom: 20,
+    color: '#fff',
     fontWeight: 'bold',
+    marginBottom: 15,
+    marginTop: 30,
     textAlign: 'center',
   },
-  chart: {
-    borderRadius: 12,
-    marginBottom: 25,
-  },
-  noData: {
-    color: '#aaa',
-    textAlign: 'center',
-    marginVertical: 20,
-  },
-  label: {
-    color: '#ccc',
-    fontSize: 16,
-    marginTop: 10,
-  },
+  subHeader: { color: '#fff', fontSize: 18, marginTop: 20, marginBottom: 8 },
   input: {
-    backgroundColor: '#1e2a3a',
+    backgroundColor: '#1e1b33',
     color: '#fff',
     padding: 10,
-    borderRadius: 8,
+    borderRadius: 10,
     marginBottom: 10,
   },
-  infoText: {
-    color: '#00f2ff',
-    fontSize: 16,
-    marginTop: 10,
-    textAlign: 'center',
+  btn: {
+    backgroundColor: '#00f2ff',
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginBottom: 15,
   },
-  sectionTitle: {
-    color: '#fff',
-    fontSize: 20,
-    marginTop: 25,
-    fontWeight: 'bold',
-    textAlign: 'center',
+  btnText: { color: '#000', textAlign: 'center', fontWeight: 'bold' },
+  chart: { borderRadius: 10, marginVertical: 15 },
+  noData: { textAlign: 'center', color: '#ccc', marginTop: 20 },
+  goalInfo: { marginTop: 10, alignItems: 'center' },
+  infoText: { color: '#fff', fontSize: 16 },
+  badgeBox: {
+    backgroundColor: '#382f5a',
+    borderRadius: 10,
+    padding: 15,
+    marginVertical: 10,
+    alignItems: 'center',
+    borderColor: '#00f2ff',
+    borderWidth: 1,
   },
+  badgeText: { color: '#00f2ff', fontSize: 18, fontWeight: 'bold' },
   filterRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 15,
+    marginVertical: 10,
   },
   filterButton: {
+    backgroundColor: '#3d2e6c',
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 15,
+    borderRadius: 10,
     marginHorizontal: 5,
-    borderRadius: 10,
-    backgroundColor: '#2e2e2e',
   },
-  filterButtonActive: {
-    backgroundColor: '#00f2ff',
-  },
-  filterText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  badgeBox: {
-    backgroundColor: '#262d3d',
-    borderColor: '#00f2ff',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 15,
-    alignItems: 'center',
-    marginVertical: 15,
-  },
-  badgeText: {
-    color: '#00f2ff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+  activeButton: { backgroundColor: '#00f2ff' },
+  filterText: { color: '#fff', fontWeight: 'bold' },
 });
 
-export default ProgressScreen;
+export default ProgressOverview;

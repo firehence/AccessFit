@@ -8,7 +8,6 @@ import { Accelerometer } from 'expo-sensors';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './src/firebase-fix';
 
-// Screens
 import SignUpScreen from './src/screens/SignUpScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import MainScreen from './src/screens/MainScreen';
@@ -23,6 +22,9 @@ import ProgressScreen from './src/screens/ProgressScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import CardioScreen from './src/screens/CardioScreen';
 import SplashScreen from './src/screens/SplashScreen';
+import PurchaseScreen from './src/screens/PurchaseScreen';
+import GymLogScreen from './src/screens/GymLogScreen';
+import BadgeGalleryScreen from './src/screens/BadgeGalleryScreen';
 
 LogBox.ignoreLogs(['Setting a timer']);
 
@@ -36,6 +38,18 @@ function WorkoutPlansStack() {
       <InnerStack.Screen name="WorkoutPlansMain" component={WorkoutPlansScreen} />
       <InnerStack.Screen name="ExerciseSelection" component={ExerciseSelectionScreen} />
     </InnerStack.Navigator>
+  );
+}
+
+function MainHomeStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="Cardio" component={CardioScreen} />
+      <Stack.Screen name="Timer" component={TimerScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Progress" component={ProgressScreen} />
+    </Stack.Navigator>
   );
 }
 
@@ -90,19 +104,7 @@ function BottomTabsWithScreens() {
         },
       })}
     >
-      <Tab.Screen
-        name="MainHome"
-        options={{ title: 'Home' }}
-        children={() => (
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="Cardio" component={CardioScreen} />
-            <Stack.Screen name="Timer" component={TimerScreen} />
-            <Stack.Screen name="Profile" component={ProfileScreen} />
-            <Stack.Screen name="Progress" component={ProgressScreen} />
-          </Stack.Navigator>
-        )}
-      />
+      <Tab.Screen name="MainHome" component={MainHomeStack} options={{ title: 'Home' }} />
       <Tab.Screen name="WorkoutPlansStack" component={WorkoutPlansStack} options={{ title: 'WorkoutPlans' }} />
       <Tab.Screen name="QRScanner" component={QRScannerScreen} />
       <Tab.Screen name="Workout" component={MyWorkoutScreen} />
@@ -164,11 +166,7 @@ export default function App() {
         ...existing.filter((d) => d.date !== today),
         { date: today, steps: count },
       ];
-      await setDoc(
-        ref,
-        { stepHistory: updated, dailyStepCount: count },
-        { merge: true }
-      );
+      await setDoc(ref, { stepHistory: updated, dailyStepCount: count }, { merge: true });
     };
 
     const checkNewDay = () => {
@@ -197,6 +195,9 @@ export default function App() {
         <Stack.Screen name="SignIn" component={SignInScreen} />
         <Stack.Screen name="SignUp" component={SignUpScreen} />
         <Stack.Screen name="BottomTabs" component={BottomTabsWithScreens} />
+        <Stack.Screen name="PurchaseScreen" component={PurchaseScreen} />
+        <Stack.Screen name="GymLogScreen" component={GymLogScreen} />
+        <Stack.Screen name="BadgeGallery" component={BadgeGalleryScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
