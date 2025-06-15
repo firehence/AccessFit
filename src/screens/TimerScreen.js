@@ -12,7 +12,7 @@ const TimerScreen = () => {
     const sub = AppState.addEventListener("change", nextState => {
       if (appState.current.match(/active/) && nextState === "background") {
         if (isRunning) {
-          console.log("App gitti ama timer açık 😴");
+          console.log("App gitti ama timer açık ");
         }
       }
       appState.current = nextState;

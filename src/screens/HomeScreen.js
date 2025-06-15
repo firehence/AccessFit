@@ -1,3 +1,4 @@
+// 1. KISIM (imports ve useEffect)
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -30,6 +31,7 @@ const HomeScreen = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const { promptAsync, accessToken, isReady } = useSpotifyAuth();
+  const [storedSpotifyToken, setStoredSpotifyToken] = useState(null);
 
   const fetchTodaySteps = async () => {
     const uid = auth.currentUser?.uid;
@@ -46,45 +48,53 @@ const HomeScreen = () => {
   };
 
   const fetchAllData = async () => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
+  const uid = auth.currentUser?.uid;
+  if (!uid) return;
 
-    const ref = doc(db, "users", uid);
-    const snap = await getDoc(ref);
-    if (snap.exists()) {
-      const data = snap.data();
-      if (data?.name) setUserName(data.name);
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    const data = snap.data();
 
-      const today = new Date().toISOString().split("T")[0];
-      const todayRecord = data?.stepHistory?.find((s) => s.date === today);
-      setTodaySteps(todayRecord?.steps || 0);
+    if (data?.fullName) setUserName(data.fullName);
 
-      if (data?.weightHistory) {
-        const sorted = data.weightHistory
-          .sort((a, b) => new Date(a.date) - new Date(b.date))
-          .slice(-7);
-        setWeightHistory(sorted);
-      }
+    const today = new Date().toISOString().split("T")[0];
+    const todayRecord = data?.stepHistory?.find((s) => s.date === today);
+    setTodaySteps(todayRecord?.steps || 0);
+
+    if (data?.weightHistory) {
+      const sorted = data.weightHistory
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(-7);
+      setWeightHistory(sorted);
     }
+  }
 
-    const savedPlan = await AsyncStorage.getItem("workoutPlan");
-    if (savedPlan) {
-      setWorkoutPlan(JSON.parse(savedPlan));
-    }
-  };
+  const savedPlan = await AsyncStorage.getItem("workoutPlan");
+  if (savedPlan) {
+    setWorkoutPlan(JSON.parse(savedPlan));
+  }
+
+  const savedSpotifyToken = await AsyncStorage.getItem("spotify_token");
+  if (savedSpotifyToken) {
+    setStoredSpotifyToken(savedSpotifyToken);
+  }
+};
+
 
   useEffect(() => {
-    const saveSpotifyToken = async () => {
-      if (accessToken) {
+    if (accessToken) {
+      const saveToken = async () => {
         await AsyncStorage.setItem("spotify_token", accessToken);
         const uid = auth.currentUser?.uid;
         if (uid) {
           const ref = doc(db, "users", uid);
           await setDoc(ref, { spotifyAccessToken: accessToken }, { merge: true });
         }
-      }
-    };
-    saveSpotifyToken();
+        setStoredSpotifyToken(accessToken);
+      };
+      saveToken();
+    }
   }, [accessToken]);
 
   useEffect(() => {
@@ -100,7 +110,6 @@ const HomeScreen = () => {
       useNativeDriver: true,
     }).start();
   }, []);
-
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
       toValue: 0.97,
@@ -121,26 +130,24 @@ const HomeScreen = () => {
     try {
       await promptAsync();
     } catch (e) {
-      Alert.alert("Spotify", "Spotify bağlantısı başarısız oldu.");
+      Alert.alert("Spotify", "Spotify connection failed.");
     }
   };
 
-  const chartData = {
-    labels:
-      weightHistory.length > 0
-        ? weightHistory.map((e) => e.date.slice(5))
-        : ["-", "-"],
-    datasets: [
-      {
-        data:
-          weightHistory.length > 0
-            ? weightHistory.map((e) => parseFloat(e.weight))
-            : [0, 0],
-        color: () => `rgba(0, 255, 200, 1)`,
-        strokeWidth: 2,
-      },
-    ],
-  };
+const chartData = {
+  labels: weightHistory.map(e => e.date.slice(5)),
+  datasets: [{
+    data: weightHistory.map(e => parseFloat(e.weight)),
+    color: () => `rgba(0, 255, 200, 1)`,
+    strokeWidth: 2,
+  }]
+};
+
+if (chartData.labels.length === 0) {
+  chartData.labels = ["-", "-"];
+  chartData.datasets[0].data = [0, 0];
+}
+
 
   return (
     <LinearGradient colors={["#2E0066", "#50238F", "#9A75DA"]} style={styles.container}>
@@ -164,7 +171,9 @@ const HomeScreen = () => {
             style={[styles.card, styles.primaryCard]}
           >
             <FontAwesome5 name="dumbbell" size={24} color="black" />
-            <Text style={styles.cardTitle}>{workoutPlan ? workoutPlan.name : "My Workout"}</Text>
+            <Text style={styles.cardTitle}>
+              {workoutPlan ? workoutPlan.name : "My Workout"}
+            </Text>
             <Text style={styles.cardSubtitle}>
               {workoutPlan ? `${workoutPlan.exercises.length} exercises` : ""}
             </Text>
@@ -203,7 +212,7 @@ const HomeScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {!accessToken && (
+        {!storedSpotifyToken && (
           <TouchableOpacity
             style={styles.spotifyConnectButton}
             onPress={handleSpotifyConnect}
@@ -214,7 +223,7 @@ const HomeScreen = () => {
           </TouchableOpacity>
         )}
 
-        {accessToken && <SpotifyWidget token={accessToken} />}
+        {storedSpotifyToken && <SpotifyWidget token={storedSpotifyToken} />}
 
         <Text style={styles.sectionTitle}>Progress Overview</Text>
         <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate("Progress")}>
@@ -245,29 +254,16 @@ const HomeScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 50,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 30,
-  },
+  container: { flex: 1, paddingTop: 50 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 30 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
   },
-  greeting: {
-    color: "white",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  planContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
+  greeting: { color: "white", fontSize: 24, fontWeight: "bold" },
+  planContainer: { flexDirection: "row", justifyContent: "space-between" },
   card: {
     width: "48%",
     padding: 20,
@@ -279,32 +275,12 @@ const styles = StyleSheet.create({
     elevation: 10,
     backgroundColor: "#fff",
   },
-  primaryCard: {
-    backgroundColor: "#C9B6F2",
-  },
-  secondaryCard: {
-    backgroundColor: "#2D1B4D",
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "black",
-    marginTop: 10,
-  },
-  cardSubtitle: {
-    fontSize: 14,
-    color: "black",
-  },
-  cardTitleWhite: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "white",
-    marginTop: 10,
-  },
-  cardSubtitleWhite: {
-    fontSize: 14,
-    color: "white",
-  },
+  primaryCard: { backgroundColor: "#C9B6F2" },
+  secondaryCard: { backgroundColor: "#2D1B4D" },
+  cardTitle: { fontSize: 18, fontWeight: "bold", color: "black", marginTop: 10 },
+  cardSubtitle: { fontSize: 14, color: "black" },
+  cardTitleWhite: { fontSize: 18, fontWeight: "bold", color: "white", marginTop: 10 },
+  cardSubtitleWhite: { fontSize: 14, color: "white" },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -321,17 +297,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 6,
   },
-  smallCardText: {
-    color: "white",
-    marginTop: 5,
-  },
-  timerCard: {
-    backgroundColor: "#A4E764",
-  },
-  smallCardTextBlack: {
-    color: "black",
-    marginTop: 5,
-  },
+  smallCardText: { color: "white", marginTop: 5 },
+  timerCard: { backgroundColor: "#A4E764" },
+  smallCardTextBlack: { color: "black", marginTop: 5 },
   sectionTitle: {
     color: "white",
     fontSize: 20,
@@ -339,10 +307,7 @@ const styles = StyleSheet.create({
     marginTop: 30,
     marginBottom: 10,
   },
-  chart: {
-    borderRadius: 16,
-    marginBottom: 30,
-  },
+  chart: { borderRadius: 16, marginBottom: 30 },
   spotifyConnectButton: {
     marginTop: 20,
     backgroundColor: "#2E2E2E",
@@ -351,11 +316,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  connectText: {
-    color: "#fff",
-    fontSize: 16,
-    marginLeft: 10,
-  },
+  connectText: { color: "#fff", fontSize: 16, marginLeft: 10 },
 });
 
 export default HomeScreen;

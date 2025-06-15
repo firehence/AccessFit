@@ -6,13 +6,14 @@ import { useEffect, useState } from "react";
 WebBrowser.maybeCompleteAuthSession();
 
 const CLIENT_ID = "53b12c6b24a0423c958a9c9799b8f1ab";
+
 const SCOPES = [
   "user-read-playback-state",
   "user-read-currently-playing",
   "user-modify-playback-state",
 ];
 
-const redirectUri = "https://auth.expo.io/@firehence/accessfit-clean";
+const redirectUri = AuthSession.makeRedirectUri({ useProxy: true });
 
 const discovery = {
   authorizationEndpoint: "https://accounts.spotify.com/authorize",
@@ -26,7 +27,7 @@ export function useSpotifyAuth() {
     {
       clientId: CLIENT_ID,
       scopes: SCOPES,
-      redirectUri, 
+      redirectUri,
       usePKCE: true,
       responseType: "code",
     },
@@ -41,7 +42,7 @@ export function useSpotifyAuth() {
             {
               clientId: CLIENT_ID,
               code: response.params.code,
-              redirectUri, 
+              redirectUri,
               extraParams: {
                 code_verifier: request.codeVerifier,
               },

@@ -48,11 +48,14 @@ const SpotifyWidget = ({ token }) => {
             isPlaying: false,
             isRecent: true,
           });
-          return;
         }
       }
-    } catch {}
-    setTrack(null);
+    } catch (e) {
+      console.log("🎵 Recent error:", e);
+      setTrack(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchTrack = async () => {
@@ -73,9 +76,7 @@ const SpotifyWidget = ({ token }) => {
 
       if (res.ok) {
         const json = await res.json();
-        if (!json?.item) {
-          return fetchRecentlyPlayed();
-        }
+        if (!json?.item) return fetchRecentlyPlayed();
 
         setTrack({
           name: json.item.name,
@@ -87,7 +88,8 @@ const SpotifyWidget = ({ token }) => {
         });
         setTokenValid(true);
       }
-    } catch {
+    } catch (e) {
+      console.log("🎵 Current error:", e);
       setTrack(null);
     } finally {
       setLoading(false);
@@ -104,7 +106,9 @@ const SpotifyWidget = ({ token }) => {
         },
       });
       fetchTrack();
-    } catch {}
+    } catch (e) {
+      console.log("⚠️ Playback error:", e);
+    }
   };
 
   useEffect(() => {
@@ -116,20 +120,25 @@ const SpotifyWidget = ({ token }) => {
           await setDoc(ref, { spotifyAccessToken: token }, { merge: true });
         } catch {}
       }
-      if (token) fetchTrack();
-      else setLoading(false);
+
+      if (token) {
+        setTokenValid(true);
+        await fetchTrack();
+        setTimeout(fetchTrack, 2000); 
+      } else {
+        setLoading(false);
+      }
     };
 
     init();
 
     const interval = setInterval(() => {
       if (token) fetchTrack();
-    }, 15000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [token]);
 
-  // App'e geri dönünce tekrar müzik kontrolü yap
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active" && token) {
@@ -143,27 +152,11 @@ const SpotifyWidget = ({ token }) => {
     return <ActivityIndicator color="#fff" style={{ marginTop: 20 }} />;
   }
 
-  if (!tokenValid) {
+  if (!token || !tokenValid) {
     return (
       <TouchableOpacity style={styles.connectBox} onPress={reconnectSpotify}>
         <FontAwesome5 name="spotify" size={24} color="#fff" />
-        <Text style={styles.connectText}>Token expired. Tap to reconnect Spotify.</Text>
-      </TouchableOpacity>
-    );
-  }
-
-  if (!track) {
-    return (
-      <TouchableOpacity
-        style={styles.connectBox}
-        onPress={() => {
-          Linking.openURL("https://open.spotify.com");
-        }}
-      >
-        <FontAwesome5 name="spotify" size={24} color="#fff" />
-        <Text style={styles.connectText}>
-          You're connected to Spotify, but nothing is currently playing.
-        </Text>
+        <Text style={styles.connectText}>Not connected to Spotify. Tap to reconnect.</Text>
       </TouchableOpacity>
     );
   }
@@ -187,8 +180,8 @@ const SpotifyWidget = ({ token }) => {
             <View style={[styles.albumArt, { backgroundColor: "#444" }]} />
           )}
           <View style={styles.trackText}>
-            <Text style={styles.song} numberOfLines={1}>{track?.name || "Unknown track"}</Text>
-            <Text style={styles.artist} numberOfLines={1}>{track?.artist || "Unknown artist"}</Text>
+            <Text style={styles.song} numberOfLines={1}>{track?.name || "No track playing"}</Text>
+            <Text style={styles.artist} numberOfLines={1}>{track?.artist || "Spotify Connected"}</Text>
           </View>
           <FontAwesome5 name="spotify" size={20} color="#fff" style={{ marginLeft: 8 }} />
         </View>
@@ -196,8 +189,8 @@ const SpotifyWidget = ({ token }) => {
           <TouchableOpacity onPress={() => controlPlayback("previous")}>
             <Entypo name="controller-jump-to-start" size={28} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => controlPlayback(track.isPlaying ? "pause" : "play")}>
-            <Entypo name={track.isPlaying ? "controller-paus" : "controller-play"} size={28} color="#fff" />
+          <TouchableOpacity onPress={() => controlPlayback(track?.isPlaying ? "pause" : "play")}>
+            <Entypo name={track?.isPlaying ? "controller-paus" : "controller-play"} size={28} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => controlPlayback("next")}>
             <Entypo name="controller-next" size={28} color="#fff" />
