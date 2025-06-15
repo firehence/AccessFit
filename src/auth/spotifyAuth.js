@@ -6,21 +6,18 @@ import { useEffect, useState } from "react";
 WebBrowser.maybeCompleteAuthSession();
 
 const CLIENT_ID = "53b12c6b24a0423c958a9c9799b8f1ab";
-
 const SCOPES = [
   "user-read-playback-state",
   "user-read-currently-playing",
   "user-modify-playback-state",
 ];
 
+const redirectUri = "https://auth.expo.io/@firehence/accessfit-clean";
+
 const discovery = {
   authorizationEndpoint: "https://accounts.spotify.com/authorize",
   tokenEndpoint: "https://accounts.spotify.com/api/token",
 };
-
-const REDIRECT_URI = AuthSession.makeRedirectUri({
-  useProxy: true,
-});
 
 export function useSpotifyAuth() {
   const [accessToken, setAccessToken] = useState(null);
@@ -29,24 +26,22 @@ export function useSpotifyAuth() {
     {
       clientId: CLIENT_ID,
       scopes: SCOPES,
-      redirectUri: REDIRECT_URI,
+      redirectUri, 
       usePKCE: true,
-      responseType: "code", 
+      responseType: "code",
     },
     discovery
   );
 
   useEffect(() => {
     const handleAuthResponse = async () => {
-      console.log("🎯 Spotify Auth Response:", response);
-
       if (response?.type === "success" && response.params?.code) {
         try {
           const tokens = await AuthSession.exchangeCodeAsync(
             {
               clientId: CLIENT_ID,
               code: response.params.code,
-              redirectUri: REDIRECT_URI,
+              redirectUri, 
               extraParams: {
                 code_verifier: request.codeVerifier,
               },
@@ -69,8 +64,8 @@ export function useSpotifyAuth() {
   useEffect(() => {
     const loadStoredToken = async () => {
       const saved = await AsyncStorage.getItem("spotify_token");
-      console.log("📦 Loaded token from storage:", saved);
       if (saved) {
+        console.log("📦 Loaded token from storage:", saved);
         setAccessToken(saved);
       }
     };

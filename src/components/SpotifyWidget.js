@@ -26,7 +26,7 @@ const SpotifyWidget = ({ token }) => {
     try {
       await promptAsync();
     } catch (e) {
-      Alert.alert("Spotify", "Spotify bağlantısı başarısız oldu.");
+      Alert.alert("Spotify", "Spotify reconnection failed.");
     }
   };
 
@@ -129,9 +129,12 @@ const SpotifyWidget = ({ token }) => {
     return () => clearInterval(interval);
   }, [token]);
 
+  // App'e geri dönünce tekrar müzik kontrolü yap
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active" && token) fetchTrack();
+      if (state === "active" && token) {
+        fetchTrack();
+      }
     });
     return () => sub.remove();
   }, [token]);
@@ -140,11 +143,27 @@ const SpotifyWidget = ({ token }) => {
     return <ActivityIndicator color="#fff" style={{ marginTop: 20 }} />;
   }
 
-  if (!token || !track || !tokenValid) {
+  if (!tokenValid) {
     return (
       <TouchableOpacity style={styles.connectBox} onPress={reconnectSpotify}>
         <FontAwesome5 name="spotify" size={24} color="#fff" />
-        <Text style={styles.connectText}>Not connected to Spotify. Tap to reconnect.</Text>
+        <Text style={styles.connectText}>Token expired. Tap to reconnect Spotify.</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  if (!track) {
+    return (
+      <TouchableOpacity
+        style={styles.connectBox}
+        onPress={() => {
+          Linking.openURL("https://open.spotify.com");
+        }}
+      >
+        <FontAwesome5 name="spotify" size={24} color="#fff" />
+        <Text style={styles.connectText}>
+          You're connected to Spotify, but nothing is currently playing.
+        </Text>
       </TouchableOpacity>
     );
   }
@@ -202,6 +221,8 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     marginLeft: 10,
+    flex: 1,
+    flexWrap: "wrap",
   },
   widget: {
     marginTop: 20,
