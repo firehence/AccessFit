@@ -65,23 +65,27 @@ npx expo start
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/04007c91-4131-47c8-bb1e-3ce474a5de58" width="300" />
   <img src="https://github.com/user-attachments/assets/b21bebc3-d86a-412b-a2de-94f1fb8768e5" width="300" />
+</p>
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/04007c91-4131-47c8-bb1e-3ce474a5de58" width="300" />
   <img src="https://github.com/user-attachments/assets/4b48531a-3440-4340-8f3f-384379769d35" width="300" />
 </p>
-
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/426a45dd-c22e-4644-b34f-99ffc937a6d5" width="300" />
+</p>
 <p align="center">
   <img src="https://github.com/user-attachments/assets/96e8a1a3-116f-42bf-a93a-fd0cb2496d22" width="300" />
-  <img src="https://github.com/user-attachments/assets/426a45dd-c22e-4644-b34f-99ffc937a6d5" width="300" />
   <img src="https://github.com/user-attachments/assets/1f99f27b-af5e-42ba-bac0-98ee42fdd50a" width="300" />
 </p>
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/dc717001-2e60-4f51-9949-781d95c9c876" width="300" />
   <img src="https://github.com/user-attachments/assets/d5222142-f7f2-4c7e-bc2d-f11d6a1e1052" width="300" />
+</p>
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/dc717001-2e60-4f51-9949-781d95c9c876" width="300" />
   <img src="https://github.com/user-attachments/assets/1a90f9a8-3c50-416d-b729-7553e0c62298" width="300" />
 </p>
-
 ---
 
 ## 👥 Team
