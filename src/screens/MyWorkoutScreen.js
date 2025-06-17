@@ -164,7 +164,9 @@ const MyWorkoutScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>My Workout Plans</Text>
+      <View style={{ marginTop: 35 }}>
+        <Text style={styles.header}>My Workout Plans</Text>
+      </View>
 
       <FlatList
         data={getFilteredPlans()}
@@ -181,7 +183,6 @@ const MyWorkoutScreen = () => {
       <TouchableOpacity
         style={styles.addBtn}
         onPress={async () => {
-          // 🔄 Güncel veriyi almak için yeniden çek
           if (userId) {
             const ref = doc(db, "users", userId);
             const snap = await getDoc(ref);
@@ -251,7 +252,13 @@ const MyWorkoutScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#10072D", padding: 20 },
-  header: { fontSize: 26, color: "white", fontWeight: "bold", textAlign: "center", marginBottom: 20 },
+  header: {
+    fontSize: 26,
+    color: "white",
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 20,
+  },
   card: { backgroundColor: "#1F1245", padding: 16, borderRadius: 14, marginBottom: 14 },
   date: { color: "#A4E764", fontWeight: "bold", fontSize: 16 },
   exercise: { color: "#ccc", fontSize: 15 },

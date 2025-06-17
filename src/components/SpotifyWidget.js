@@ -51,7 +51,7 @@ const SpotifyWidget = ({ token }) => {
         }
       }
     } catch (e) {
-      console.log("🎵 Recent error:", e);
+      console.log("🎵 Recent fetch error:", e.message);
       setTrack(null);
     } finally {
       setLoading(false);
@@ -76,7 +76,9 @@ const SpotifyWidget = ({ token }) => {
 
       if (res.ok) {
         const json = await res.json();
-        if (!json?.item) return fetchRecentlyPlayed();
+        if (!json?.item) {
+          return fetchRecentlyPlayed();
+        }
 
         setTrack({
           name: json.item.name,
@@ -89,7 +91,7 @@ const SpotifyWidget = ({ token }) => {
         setTokenValid(true);
       }
     } catch (e) {
-      console.log("🎵 Current error:", e);
+      console.log("🎵 Currently Playing fetch error:", e.message);
       setTrack(null);
     } finally {
       setLoading(false);
@@ -107,7 +109,7 @@ const SpotifyWidget = ({ token }) => {
       });
       fetchTrack();
     } catch (e) {
-      console.log("⚠️ Playback error:", e);
+      console.log("⚠️ Playback control error:", e.message);
     }
   };
 
@@ -118,13 +120,15 @@ const SpotifyWidget = ({ token }) => {
         try {
           const ref = doc(db, "users", uid);
           await setDoc(ref, { spotifyAccessToken: token }, { merge: true });
-        } catch {}
+        } catch (e) {
+          console.log("⚠️ Token save error:", e.message);
+        }
       }
 
       if (token) {
         setTokenValid(true);
         await fetchTrack();
-        setTimeout(fetchTrack, 2000); 
+        setTimeout(fetchTrack, 2000); // ek gecikme
       } else {
         setLoading(false);
       }
@@ -180,8 +184,12 @@ const SpotifyWidget = ({ token }) => {
             <View style={[styles.albumArt, { backgroundColor: "#444" }]} />
           )}
           <View style={styles.trackText}>
-            <Text style={styles.song} numberOfLines={1}>{track?.name || "No track playing"}</Text>
-            <Text style={styles.artist} numberOfLines={1}>{track?.artist || "Spotify Connected"}</Text>
+            <Text style={styles.song} numberOfLines={1}>
+              {track?.name || "No track playing"}
+            </Text>
+            <Text style={styles.artist} numberOfLines={1}>
+              {track?.artist || "Spotify Connected"}
+            </Text>
           </View>
           <FontAwesome5 name="spotify" size={20} color="#fff" style={{ marginLeft: 8 }} />
         </View>
@@ -190,7 +198,11 @@ const SpotifyWidget = ({ token }) => {
             <Entypo name="controller-jump-to-start" size={28} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => controlPlayback(track?.isPlaying ? "pause" : "play")}>
-            <Entypo name={track?.isPlaying ? "controller-paus" : "controller-play"} size={28} color="#fff" />
+            <Entypo
+              name={track?.isPlaying ? "controller-paus" : "controller-play"}
+              size={28}
+              color="#fff"
+            />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => controlPlayback("next")}>
             <Entypo name="controller-next" size={28} color="#fff" />

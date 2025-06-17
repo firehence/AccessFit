@@ -1,4 +1,3 @@
-// 1. KISIM (imports ve useEffect)
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -7,9 +6,9 @@ import {
   StyleSheet,
   Dimensions,
   Alert,
-  ScrollView,
   Animated,
   Pressable,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
@@ -27,60 +26,81 @@ const HomeScreen = () => {
   const [workoutPlan, setWorkoutPlan] = useState(null);
   const [weightHistory, setWeightHistory] = useState([]);
   const [todaySteps, setTodaySteps] = useState(0);
+  const [storedSpotifyToken, setStoredSpotifyToken] = useState(null);
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const { promptAsync, accessToken, isReady } = useSpotifyAuth();
-  const [storedSpotifyToken, setStoredSpotifyToken] = useState(null);
 
   const fetchTodaySteps = async () => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
-
     const ref = doc(db, "users", uid);
     const snap = await getDoc(ref);
     if (snap.exists()) {
-      const data = snap.data();
       const today = new Date().toISOString().split("T")[0];
-      const todayRecord = data?.stepHistory?.find((s) => s.date === today);
+      const todayRecord = snap.data()?.stepHistory?.find((s) => s.date === today);
       setTodaySteps(todayRecord?.steps || 0);
     }
   };
 
   const fetchAllData = async () => {
-  const uid = auth.currentUser?.uid;
-  if (!uid) return;
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    const ref = doc(db, "users", uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data?.fullName) setUserName(data.fullName);
 
-  const ref = doc(db, "users", uid);
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    const data = snap.data();
+      const today = new Date().toISOString().split("T")[0];
+      const todayRecord = data?.stepHistory?.find((s) => s.date === today);
+      setTodaySteps(todayRecord?.steps || 0);
 
-    if (data?.fullName) setUserName(data.fullName);
+      if (data?.weightHistory) {
+        const now = new Date();
+        const filtered = data.weightHistory
+          .filter((entry) => {
+            const diff = (now - new Date(entry.date)) / (1000 * 60 * 60 * 24);
+            return diff <= 7;
+          })
+          .sort((a, b) => new Date(a.date) - new Date(b.date));
+        setWeightHistory(filtered);
+      }
 
-    const today = new Date().toISOString().split("T")[0];
-    const todayRecord = data?.stepHistory?.find((s) => s.date === today);
-    setTodaySteps(todayRecord?.steps || 0);
-
-    if (data?.weightHistory) {
-      const sorted = data.weightHistory
-        .sort((a, b) => new Date(a.date) - new Date(b.date))
-        .slice(-7);
-      setWeightHistory(sorted);
+      const firebaseSpotifyToken = data?.spotifyAccessToken;
+      if (firebaseSpotifyToken) {
+        setStoredSpotifyToken(firebaseSpotifyToken);
+        await AsyncStorage.setItem("spotify_token", firebaseSpotifyToken);
+      }
     }
-  }
 
-  const savedPlan = await AsyncStorage.getItem("workoutPlan");
-  if (savedPlan) {
-    setWorkoutPlan(JSON.parse(savedPlan));
-  }
+    const savedPlan = await AsyncStorage.getItem("workoutPlan");
+    if (savedPlan) {
+      setWorkoutPlan(JSON.parse(savedPlan));
+    }
 
-  const savedSpotifyToken = await AsyncStorage.getItem("spotify_token");
-  if (savedSpotifyToken) {
-    setStoredSpotifyToken(savedSpotifyToken);
-  }
-};
+    const savedSpotifyToken = await AsyncStorage.getItem("spotify_token");
+    if (savedSpotifyToken && !storedSpotifyToken) {
+      setStoredSpotifyToken(savedSpotifyToken);
+    }
+  };
 
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      if (user) fetchAllData();
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const unsubscribeFocus = navigation.addListener("focus", async () => {
+      const token = await AsyncStorage.getItem("spotify_token");
+      if (token) setStoredSpotifyToken(token);
+    });
+    return unsubscribeFocus;
+  }, [navigation]);
 
   useEffect(() => {
     if (accessToken) {
@@ -98,7 +118,6 @@ const HomeScreen = () => {
   }, [accessToken]);
 
   useEffect(() => {
-    fetchAllData();
     const interval = setInterval(fetchTodaySteps, 2000);
     return () => clearInterval(interval);
   }, []);
@@ -110,6 +129,7 @@ const HomeScreen = () => {
       useNativeDriver: true,
     }).start();
   }, []);
+
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
       toValue: 0.97,
@@ -134,27 +154,26 @@ const HomeScreen = () => {
     }
   };
 
-const chartData = {
-  labels: weightHistory.map(e => e.date.slice(5)),
-  datasets: [{
-    data: weightHistory.map(e => parseFloat(e.weight)),
-    color: () => `rgba(0, 255, 200, 1)`,
-    strokeWidth: 2,
-  }]
-};
+  const validWeights = weightHistory.map(e => parseFloat(e.weight)).filter(w => !isNaN(w));
+  const chartData = {
+    labels: weightHistory.map(e => e.date.slice(5)),
+    datasets: [
+      {
+        data: validWeights.length > 0 ? validWeights : [0, 0],
+        color: () => `rgba(0, 255, 200, 1)`,
+        strokeWidth: 2,
+      },
+    ],
+  };
 
-if (chartData.labels.length === 0) {
-  chartData.labels = ["-", "-"];
-  chartData.datasets[0].data = [0, 0];
-}
-
+  if (chartData.labels.length === 0) chartData.labels = ["-", "-"];
 
   return (
     <LinearGradient colors={["#2E0066", "#50238F", "#9A75DA"]} style={styles.container}>
       <Animated.ScrollView
         style={{ opacity: fadeAnim }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={{ ...styles.scrollContent, flexGrow: 1 }}
       >
         <Animated.View style={[styles.header, { transform: [{ scale: scaleAnim }] }]}>
           <Text style={styles.greeting}>Hello, {userName} 👋</Text>
@@ -229,7 +248,7 @@ if (chartData.labels.length === 0) {
         <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate("Progress")}>
           <LineChart
             data={chartData}
-            width={Dimensions.get("window").width - 40}
+            width={Math.min(Dimensions.get("window").width - 30, 380)}
             height={220}
             yAxisSuffix="kg"
             chartConfig={{
@@ -254,13 +273,15 @@ if (chartData.labels.length === 0) {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 50 },
+  container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 30 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 30,
+    marginTop: Platform.OS === "ios" ? 60 : 0,
+    paddingTop: Platform.OS === "android" ? 60 : 0,
   },
   greeting: { color: "white", fontSize: 24, fontWeight: "bold" },
   planContainer: { flexDirection: "row", justifyContent: "space-between" },

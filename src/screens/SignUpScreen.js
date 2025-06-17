@@ -32,9 +32,9 @@ const SignUpScreen = ({ navigation }) => {
     expoClientId:
       "977379094055-kuqj6o6ro8960h86ou622jf1nf7dn0pe.apps.googleusercontent.com",
     androidClientId:
-      "977379094055-kuqj6o6ro8960h86ou622jf1nf7dn0pe.apps.googleusercontent.com",
+      "977379094055-2vtic85qv8it3lvf2md08rp9unahvve4.apps.googleusercontent.com",
     iosClientId:
-      "977379094055-kuqj6o6ro8960h86ou622jf1nf7dn0pe.apps.googleusercontent.com",
+      "977379094055-629lbuvet6kecj9f80duo0jigrtggkuu.apps.googleusercontent.com",
   });
 
   useEffect(() => {

@@ -1,17 +1,45 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../firebase-fix";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
 import { COLORS, FONTS, SIZES } from "../constants/theme";
-import { auth, db } from '../firebase-fix';
 
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+WebBrowser.maybeCompleteAuthSession();
 
 const SignInScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [keepSignedIn, setKeepSignedIn] = useState(false);
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    expoClientId:
+      "977379094055-kuqj6o6ro8960h86ou622jf1nf7dn0pe.apps.googleusercontent.com",
+    androidClientId:
+      "977379094055-2vtic85qv8it3lvf2md08rp9unahvve4.apps.googleusercontent.com",
+    iosClientId:
+      "977379094055-629lbuvet6kecj9f80duo0jigrtggkuu.apps.googleusercontent.com",
+  });
+
+  const handleGoogleSignIn = async () => {
+    if (response?.type === "success") {
+      const { authentication } = response;
+      console.log("✅ Google Token:", authentication.accessToken);
+    } else {
+      Alert.alert("Google login cancelled or failed.");
+    }
+  };
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -20,7 +48,11 @@ const SignInScreen = ({ navigation }) => {
     }
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const uid = userCredential.user.uid;
 
       const userDocRef = doc(db, "users", uid);
@@ -31,11 +63,10 @@ const SignInScreen = ({ navigation }) => {
         userName = userDocSnap.data().fullName || "User";
       }
 
-      navigation.navigate("BottomTabs", {
+      navigation.replace("BottomTabs", {
         screen: "Home",
-        params: { userName }
+        params: { userName },
       });
-
     } catch (error) {
       alert("Login error: " + error.message);
     }
@@ -43,7 +74,7 @@ const SignInScreen = ({ navigation }) => {
 
   return (
     <LinearGradient
-      colors={[COLORS.background.start, COLORS.background.end]}
+      colors={["#2E0066", "#50238F", "#9A75DA"]}
       style={styles.container}
     >
       <View style={styles.header}>
@@ -79,7 +110,9 @@ const SignInScreen = ({ navigation }) => {
           onPress={() => setKeepSignedIn(!keepSignedIn)}
         >
           <View style={[styles.checkbox, keepSignedIn && styles.checked]}>
-            {keepSignedIn && <Ionicons name="checkmark" size={16} color={COLORS.white} />}
+            {keepSignedIn && (
+              <Ionicons name="checkmark" size={16} color={COLORS.white} />
+            )}
           </View>
           <Text style={styles.checkboxText}>Keep me signed in</Text>
         </TouchableOpacity>
@@ -98,9 +131,13 @@ const SignInScreen = ({ navigation }) => {
           <View style={styles.line} />
         </View>
 
-        <TouchableOpacity style={[styles.googleButton, { opacity: 0.5 }]} disabled>
+        <TouchableOpacity
+          style={[styles.googleButton, { opacity: request ? 1 : 0.4 }]}
+          onPress={() => promptAsync()}
+          disabled={!request}
+        >
           <Ionicons name="logo-google" size={20} color={COLORS.white} />
-          <Text style={styles.googleText}>Google ile devam (Expo Go'da desteklenmiyor)</Text>
+          <Text style={styles.googleText}>Continue with Google</Text>
         </TouchableOpacity>
       </View>
 
@@ -109,7 +146,8 @@ const SignInScreen = ({ navigation }) => {
         onPress={() => navigation.navigate("SignUp")}
       >
         <Text style={styles.signUpText}>
-          Don't have an account? <Text style={styles.signUpLink}>Sign Up</Text>
+          Don’t have an account?{" "}
+          <Text style={styles.signUpLink}>Sign Up</Text>
         </Text>
       </TouchableOpacity>
     </LinearGradient>
@@ -215,6 +253,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: SIZES.medium,
     fontWeight: FONTS.bold,
+    marginLeft: 10,
   },
   signUpContainer: {
     alignItems: "center",

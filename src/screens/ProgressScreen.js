@@ -30,23 +30,16 @@ const ProgressOverview = () => {
   const [badgeLevel, setBadgeLevel] = useState(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const badgeEmoji = {
-    bronze: '🥉',
-    silver: '🥈',
-    gold: '🥇',
-  };
+  const badgeEmoji = { bronze: '🥉', silver: '🥈', gold: '🥇' };
 
   const fetchProgressData = async () => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
-    const userRef = doc(db, 'users', uid);
-    const docSnap = await getDoc(userRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      const map = new Map();
-      (data.weightHistory || []).forEach((entry) => map.set(entry.date, entry));
-      const unique = Array.from(map.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
-      setWeightHistory(unique);
+    const snap = await getDoc(doc(db, 'users', uid));
+    if (snap.exists()) {
+      const data = snap.data();
+      const sorted = (data.weightHistory || []).sort((a, b) => new Date(a.date) - new Date(b.date));
+      setWeightHistory(sorted);
       setTargetWeight(data.targetWeight || '');
       setDailyCalories(data.dailyCalories || '');
       setNewTargetWeight(data.targetWeight || '');
@@ -68,9 +61,8 @@ const ProgressOverview = () => {
     const uid = auth.currentUser?.uid;
     if (!uid || !currentWeight) return;
     const date = new Date().toISOString().split('T')[0];
-    const map = new Map(weightHistory.map((entry) => [entry.date, entry]));
-    map.set(date, { date, weight: parseFloat(currentWeight) });
-    const updated = Array.from(map.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
+    const updated = [...weightHistory.filter((e) => e.date !== date), { date, weight: parseFloat(currentWeight) }]
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
     await updateDoc(doc(db, 'users', uid), { weightHistory: updated });
     setWeightHistory(updated);
     setCurrentWeight('');
@@ -95,7 +87,7 @@ const ProgressOverview = () => {
       const jsonContent = JSON.stringify({ weightHistory }, null, 2);
       await Share.share({ message: jsonContent });
     } catch (err) {
-      console.error('Error exporting JSON:', err);
+      console.error('Export error:', err);
     }
   };
 
@@ -114,6 +106,7 @@ const ProgressOverview = () => {
       const diff = latest - parseFloat(targetWeight);
       const estDays = Math.ceil(Math.abs((diff * 7700) / dailyCalories));
       setEstimatedDaysLeft(estDays);
+
       if (!goalReached && latest <= parseFloat(targetWeight)) {
         const uid = auth.currentUser?.uid;
         const userRef = doc(db, 'users', uid);
@@ -141,8 +134,8 @@ const ProgressOverview = () => {
   };
 
   const chartData = {
-    labels: filteredData().map((entry) => entry.date.slice(5)),
-    datasets: [{ data: filteredData().map((entry) => entry.weight), strokeWidth: 2 }],
+    labels: filteredData().map((e) => e.date.slice(5)),
+    datasets: [{ data: filteredData().map((e) => e.weight), strokeWidth: 2 }],
   };
 
   return (
@@ -164,10 +157,10 @@ const ProgressOverview = () => {
           ))}
         </View>
 
-        {filteredData().length > 1 ? (
+        {chartData.datasets[0].data.length > 1 ? (
           <LineChart
             data={chartData}
-            width={Dimensions.get('window').width - 30}
+            width={Math.min(Dimensions.get('window').width - 30, 380)}
             height={220}
             yAxisSuffix="kg"
             chartConfig={{
@@ -176,8 +169,10 @@ const ProgressOverview = () => {
               decimalPlaces: 1,
               color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
               labelColor: () => '#fff',
+              propsForDots: { r: '4', strokeWidth: '2', stroke: '#00f2ff' },
             }}
             style={styles.chart}
+            bezier
           />
         ) : (
           <Text style={styles.noData}>No weight data yet.</Text>
